@@ -1,0 +1,24 @@
+{
+    "server":{
+        "host": "192.168.101.193",
+        "port": 8883,
+        "qos": 1,
+        "keep_alive":60,
+        "tls": true,
+        "insecure": false,
+        "cli_verify": true,
+        "server_ca": "security/emqx.org.crt",
+        "cli_cert":"security/client.crt",
+        "cli_key": "security/client.key",
+        
+    },
+    "topic": 
+    {
+        "topic_request": "/sip/inductive/firmware/esp32-wroom-32d/request",
+        "topic_response": "/sip/inductive/firmware/esp32-wroom-32d/response"
+    },
+    "file":{
+        "src": "asset/MQTT.jpg",
+        "dst": "asset/MQTT_received.jpg"
+    }
+}

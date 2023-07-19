@@ -110,7 +110,7 @@ class FileSenderProcessor(Thread):
         self.meta = 'Sender: '
         self.procFileInfo = defaultdict(lambda:FileShareInfo)   # dictionary for file to be processed now()
         self.stop = stopflag
-        self.chunsize = 1024 # chunck size in byte
+        self.chunsize = 512 # chunck size in byte
         self.init = True
     
     # load configuration
@@ -269,7 +269,7 @@ class FileSenderProcessor(Thread):
         payload: dictionary data of request
         props: property of request
         """
-        logging.debug(f"{self.meta}receive file transfer request: \n\t topic = {topic_send}, \n\tpayload = {topic_reply}, \n\tproperties: {props}")
+        logging.debug(f"{self.meta}receive file transfer request: \n\t topic = {topic_send}, \n\tresponseTopic = {topic_reply}, \n\tproperties: {props}")
         
         # check file name from payload and properties in real product
         file = self.get_file_from_property(payload, props)
@@ -302,6 +302,7 @@ class FileSenderProcessor(Thread):
             props = mqtt.Properties(PacketTypes.PUBLISH)
             props.CorrelationData = fileInfo.corr_data
             props.ResponseTopic = fileInfo.topic_reply
+            props.PayloadFormatIndicator = 0
 
             props.UserProperty = (UserDataKeys.FILE_SIZE, str(fileInfo.filesize))
             props.UserProperty = (UserDataKeys.CHUNK_SIZE, str(self.chunsize))

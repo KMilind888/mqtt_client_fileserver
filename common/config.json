@@ -14,7 +14,7 @@
     },
     "topic": 
     {
-        "topic_request": "/sip/inductive/firmware/esp32-wroom-32d/request",
+        "topic_request": "/sip/inductive/firmware/esp32-wroom-32d/devid_001/reqeust",
         "topic_response": "/sip/inductive/firmware/esp32-wroom-32d/response"
     },
     "file":{

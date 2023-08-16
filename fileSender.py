@@ -166,23 +166,12 @@ class FileSenderProcessor(Thread):
         # check correlation data
         topic = msg.topic
         
-        try:
-            if type(msg.payload) == type(''): 
-                payload = json.loads(msg.payload)
-            elif type(msg.payload) == type(b''): 
-                payload = json.loads(msg.payload.decode('utf-8')) # decode bytes into string
-        except ValueError: 
-            logging.error(f"paylod isn't json format: {msg.payload}")
-            payload = dict()
+        props = dict()
+        if hasattr(msg.properties, 'UserProperty'): # load user property
+            props = dict(msg.properties.UserProperty)
+        logging.debug(f"receive file sharing request : user property: {topic}: {props}")
 
-
-        logging.debug(f"{self.meta} success to recevie data: topic = {topic}, payload = {payload}")
         if topic == self.topic_req: # first request of file sharing
-            props = dict()
-            if hasattr(msg.properties, 'UserProperty'): # load user property
-                props = dict(msg.properties.UserProperty)
-            logging.debug(f"receive file sharing request : user property: {topic}: {props}")
-            
             # check response topic
             topic_send = self.topic_send
             if hasattr(msg.properties, 'ResponseTopic'): # esp32 want to send file into this topic
@@ -199,7 +188,7 @@ class FileSenderProcessor(Thread):
             # create reponse topic of send topic
             topic_send_rep = f'{topic_send}/{transID}'
             self.mqttc.subscribe(topic_send_rep, qos = self.qos)
-            self.publish_file( topic_send, topic_send_rep, transID, payload, props)
+            self.publish_file( topic_send, topic_send_rep, transID, props)
             logging.info(f'{self.meta}: subscribt into file transfer response topic: {topic_send_rep}')
             return
 
@@ -209,8 +198,8 @@ class FileSenderProcessor(Thread):
                 logging.debug(f"correlation data: {transID}")
                 
                 # parse response
-                res = payload[UserDataKeys.RESULT] 
-                completed = payload[UserDataKeys.COMPLETED]
+                res = self.str2bool(props[UserDataKeys.RESULT])
+                completed = self.str2bool(props[UserDataKeys.COMPLETED])
                 if completed:  # 
                     topic_response = self.procFileInfo[transID].topic_reply
                     self.mqttc.unsubscribe(topic_response)
@@ -218,10 +207,10 @@ class FileSenderProcessor(Thread):
                     return
 
                 if res: # increase chunk index
-                    self.procFileInfo[transID].chk_idx  = int(payload[UserDataKeys.CHUNK_ID]) + 1
+                    self.procFileInfo[transID].chk_idx  = int(props[UserDataKeys.CHUNK_ID]) + 1
                     logging.info(f'success to receive data, increase chunk index: chunk_id = {self.procFileInfo[transID].chk_idx}')
                 else: 
-                    self.procFileInfo[transID].chk_idx  = int(payload[UserDataKeys.CHUNK_ID])
+                    self.procFileInfo[transID].chk_idx  = int(props[UserDataKeys.CHUNK_ID])
                     logging.warn(f'faile to receive data, send again = {self.procFileInfo[transID].chk_idx}')
                 
                 self.send_one_chunk(self.procFileInfo[transID])
@@ -256,12 +245,12 @@ class FileSenderProcessor(Thread):
         It should determine the correct file path by analyzing the payload and property json string. 
         It should be implemented for how to analyze the file sharing request
     """
-    def get_file_from_property(self, payload, properties): 
+    def get_file_from_property(self, properties): 
         # return the default file name now
         return self.cfg.file.src
 
     # send a first packet of one file 
-    def publish_file(self, topic_send, topic_reply, transactionID, payload, props): 
+    def publish_file(self, topic_send, topic_reply, transactionID, props): 
         """
         topic_send: topic to send a file
         topic_reply: toic to receive a reponse
@@ -272,14 +261,14 @@ class FileSenderProcessor(Thread):
         logging.debug(f"{self.meta}receive file transfer request: \n\t topic = {topic_send}, \n\tresponseTopic = {topic_reply}, \n\tproperties: {props}")
         
         # check file name from payload and properties in real product
-        file = self.get_file_from_property(payload, props)
+        file = self.get_file_from_property(props)
         if not os.path.isfile(file): 
             logging.error('Canot find file: {}'.format(file))
             return
         filesize = os.stat(file).st_size # file size
         nbrChunks = math.ceil(filesize / self.chunsize)
         self.procFileInfo[transactionID] = FileShareInfo(
-            topic_send, topic_reply, transactionID,
+            topic_send, topic_reply, transactionID, transactionID,
             file, filesize, self.chunsize, nbrChunks, 0)
         # send first chunk for new request
         self.send_one_chunk(self.procFileInfo[transactionID])
@@ -294,7 +283,8 @@ class FileSenderProcessor(Thread):
         
         logging.info(f'{self.meta}publising of {chunk_index}/{fileInfo.total_chks} chunk')
         with open(fileInfo.filePath, "rb") as f: 
-            f.seek(self.chunsize* chunk_index)
+            chunk_position = self.chunsize* chunk_index
+            f.seek(chunk_position)
             content = f.read(self.chunsize)
             data = bytearray(content)
             logging.debug(f"chunk size: {len(data)}, type = {type(data)}")
@@ -304,9 +294,11 @@ class FileSenderProcessor(Thread):
             props.ResponseTopic = fileInfo.topic_reply
             props.PayloadFormatIndicator = 0
 
+            props.UserProperty = (UserDataKeys.FILE_ID, str(fileInfo.fileid))
+            props.UserProperty = (UserDataKeys.FILE_NAME, os.path.basename(fileInfo.filePath))
             props.UserProperty = (UserDataKeys.FILE_SIZE, str(fileInfo.filesize))
-            props.UserProperty = (UserDataKeys.CHUNK_SIZE, str(self.chunsize))
-            props.UserProperty = (UserDataKeys.TOTAL_CHUNK, str(fileInfo.total_chks))
+            props.UserProperty = (UserDataKeys.POSITION, str(chunk_position))
+            props.UserProperty = (UserDataKeys.CHUNK_SIZE, str(len(content)))
             props.UserProperty = (UserDataKeys.CHUNK_ID, str(chunk_index))
             
             msgInfo = self.mqttc.publish(topic= fileInfo.topic_send, payload=data, qos = self.qos, retain=False, properties=props)
@@ -314,6 +306,8 @@ class FileSenderProcessor(Thread):
             
         logging.info(f'{self.meta}success to publish {chunk_index}/{fileInfo.total_chks}:{fileInfo.corr_data}, response topic ={fileInfo.topic_reply}')
 
+    def str2bool(self, str): 
+        return str.lower() in ['1', 'true', 'yes', 'ok']
 
 
     def run(self): 

@@ -16,12 +16,14 @@ def init_logger(logName = 'App.log', terminal = True):
 
 
 class UserDataKeys:
-    FILE_SIZE = "file_size"         # total file size in bytes
-    CHUNK_SIZE = "chunk_size"       # one chunk size in bytes
-    TOTAL_CHUNK = "total_chunk"     # a number of total chunks
-    CHUNK_ID =  "chunk_index"       # chunk index of current packet
-    COMPLETED = "completed"
-    RESULT  = "result"              # result key in request->response patten
+    FILE_ID = 'FID'                 # file transaction ID
+    FILE_NAME = 'FILE_NAME'         # file name 
+    FILE_SIZE = "SIZE"              # total file size in bytes
+    POSITION = 'POSITION'
+    CHUNK_SIZE = "DATA_LENGTH"       # one chunk size in bytes
+    CHUNK_ID =  "CHUNK_IDX"         # chunk index of current packet
+    COMPLETED = "COMPLETED"         # entire download is completed? 
+    RESULT  = "PCK_RES"             # result of one packet transfer
     
 
 
@@ -38,6 +40,7 @@ class FileShareInfo:
                  topic_send: str,       # topic of send channel
                  topic_send_rep: str,   # topic of response channel
                  corr_data: str,        # correlation data
+                 fileid: str,
                  file: str,             # file path in server
                  file_size: int,        # total file size in byte
                  chk_size = 1024,       # on chunk size in byte
@@ -46,6 +49,7 @@ class FileShareInfo:
         self.topic_send = topic_send
         self.topic_reply = topic_send_rep
         self.corr_data = bytearray(corr_data.encode('utf-8'))
+        self.fileid =fileid
         self.filePath = file
         self.filesize = file_size
         self.chk_size = chk_size

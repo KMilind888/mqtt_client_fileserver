@@ -9,16 +9,19 @@
         "cli_verify": true,
         "server_ca": "security/emqx.org.crt",
         "cli_cert":"security/client.crt",
-        "cli_key": "security/client.key",
-        
+        "cli_key": "security/client.key"
     },
     "topic": 
     {
-        "topic_request": "/sip/inductive/firmware/esp32-wroom-32d/devid_001/reqeust",
-        "topic_response": "/sip/inductive/firmware/esp32-wroom-32d/response"
+        "topic_mcu": "/sip/inductive/firmware/esp32-wroom-32d/devid_001/reqeust/#",
+        "topic_broker": "/eps32s3-wroom-1/bridge/publish/#"
+
     },
     "file":{
-        "src": "asset/MQTT.jpg",
-        "dst": "asset/MQTT_received.jpg"
+        "src": "asset/mqtt_ssl.bin",
+        "srcurl": "http://192.168.101.54:80/mqtt_ssl.bin",
+        "dst": "asset/MQTT_received.jpg",
+
     }
 }
+

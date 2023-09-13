@@ -1,5 +1,8 @@
 from multiprocessing import Queue, Event
-from common.common import init_logger
+from common.common import (
+    init_logger
+)
+
 import logging
 from fileSender import FileSenderProcessor
 from fileReceiver import FileReceiverProcessor
@@ -10,7 +13,7 @@ if __name__ == '__main__':
     logging.info('start processing')
     stop_flag = Event()
     cfg_file = 'common/config.json'
-    sender = FileSenderProcessor(config_file = cfg_file, stopflag=stop_flag)
+    sender = FileSenderProcessor(config_file = cfg_file, stopflag=stop_flag, transMode=1)
     #receiver = FileReceiverProcessor(config_file = cfg_file, stopflag=stop_flag)
     #receiver.start()
     sender.run()

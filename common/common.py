@@ -17,6 +17,7 @@ def init_logger(logName = 'App.log', terminal = True):
 
 class UserDataKeys:
     FILE_ID = 'FID'                 # file transaction ID
+    FIRM_URL = 'URL'
     FILE_NAME = 'FILE_NAME'         # file name 
     FILE_SIZE = "SIZE"              # total file size in bytes
     POSITION = 'POSITION'
@@ -25,6 +26,12 @@ class UserDataKeys:
     COMPLETED = "COMPLETED"         # entire download is completed? 
     RESULT  = "PCK_RES"             # result of one packet transfer
     
+    
+# enum definition for download mode
+class TransferMode: 
+    MQTT = 0
+    HTTP = 1
+
 
 
 def get_random_string(length):
